@@ -65,22 +65,26 @@ class ProviderByGroups(BaseProvider):
         groups = self.get_group_list()
         accounts_and_roles = {}
         for group in groups:
-            match = re.search(self.regex, group)
-            if match:
-                account = match.group('account')
-                role = match.group('role')
-                reason = 'user is in group "%s" which matches regexp "%s"' % (
-                    group, self.regex)
-                self.logger.debug(
-                    'User "%s" may access account "%s", role "%s" because %s.',
-                    self.user, role, account, reason)
-                if account in accounts_and_roles:
-                    accounts_and_roles[account].add((role, reason))
-                else:
-                    accounts_and_roles[account] = set([(role, reason)])
-            else:
-                self.logger.debug('Group "%s" did not match regex "%s"',
-                                  group, self.regex)
+            try:
+				match = re.search(self.regex, group)
+				if match:
+					account = match.group('account')
+					role = match.group('role')
+					reason = 'user is in group "%s" which matches regexp "%s"' % (
+						group, self.regex)
+					self.logger.debug(
+						'User "%s" may access account "%s", role "%s" because %s.',
+						self.user, role, account, reason)
+					if account in accounts_and_roles:
+						accounts_and_roles[account].add((role, reason))
+					else:
+						accounts_and_roles[account] = set([(role, reason)])
+				else:
+					self.logger.debug('Group "%s" did not match regex "%s"',
+									  group, self.regex)
+            except Exception as exc:
+                logging.debug("Error base_provider.ProviderByGroups.get_accounts_and_roles.group: %r" % group)
+                pass
         return accounts_and_roles
 
 
