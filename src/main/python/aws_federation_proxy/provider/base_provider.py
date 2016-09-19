@@ -5,6 +5,9 @@ from __future__ import print_function, absolute_import, unicode_literals, divisi
 import re
 import logging
 
+logging.basicConfig(filename='/var/log/python/debug.log',
+                    level=logging.DEBUG,
+                    format='%(asctime)s %(message)s')
 
 class BaseProvider(object):
     """
@@ -13,9 +16,12 @@ class BaseProvider(object):
     """
 
     def __init__(self, user, config, logger=None):
+        logging.debug('start base_provider.BaseProvider.__init__')
+        logging.debug("base_provider.BaseProvider.__init__.user: %r" % user)
         self.user = user
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
+        logging.debug('finished base_provider.BaseProvider.__init__')
 
     def get_accounts_and_roles(self):
         """Return a dict like {account1: set([(role1, reason), ...]), ...} for self.user
@@ -23,6 +29,7 @@ class BaseProvider(object):
         The "reason" in the (role, reason) tuple explains in human-readable
         form why the user is allowed to assume this role, mainly for logging.
         """
+        logging.debug('start & finished base_provider.BaseProvider.get_accounts_and_roles')
         raise NotImplementedError
 
 
@@ -41,20 +48,25 @@ class ProviderByGroups(BaseProvider):
     Actually retrieving group information must be implemented by subclasses.
     """
     def __init__(self, user, config, logger=None, **kwargs):
+        logging.debug('start base_provider.ProviderByGroups.__init__')
+        logging.debug("base_provider.ProviderByGroups.__init__.user: %r" % user)
         super(ProviderByGroups, self).__init__(
             user,
             config,
             logger=logger,
             **kwargs)
         regex = config['regex']
+        re.UNICODE
         if not regex.startswith('^'):
             regex = '^' + regex
         if not regex.endswith('$'):
             regex = regex + '$'
         self.regex = regex
+        logging.debug('finished base_provider.ProviderByGroups.__init__')
 
     def get_group_list(self):
         """Return the groups for self.user"""
+        logging.debug('start & finished base_provider.ProviderByGroups.get_group_list')
         raise NotImplementedError
 
     def get_accounts_and_roles(self):
@@ -62,36 +74,38 @@ class ProviderByGroups(BaseProvider):
         Return a dict of sets of all related
         groups which are assigned to the user
         """
+        logging.debug('start base_provider.ProviderByGroups.get_accounts_and_roles')
         groups = self.get_group_list()
         accounts_and_roles = {}
         for group in groups:
             try:
-				match = re.search(self.regex, group)
-				if match:
-					account = match.group('account')
-					role = match.group('role')
-					reason = 'user is in group "%s" which matches regexp "%s"' % (
-						group, self.regex)
-					self.logger.debug(
-						'User "%s" may access account "%s", role "%s" because %s.',
-						self.user, role, account, reason)
-					if account in accounts_and_roles:
-						accounts_and_roles[account].add((role, reason))
-					else:
-						accounts_and_roles[account] = set([(role, reason)])
-				else:
-					self.logger.debug('Group "%s" did not match regex "%s"',
-									  group, self.regex)
+                match = re.search(self.regex, group)  
+                if match:
+                    account = match.group('account')
+                    role = match.group('role')
+                    reason = 'user is in group "%s" which matches regexp "%s"' % (group, self.regex)
+                    self.logger.debug('User "%s" may access account "%s", role "%s" because %s.',
+                        self.user, role, account, reason)
+                    if account in accounts_and_roles:
+                        accounts_and_roles[account].add((role, reason))
+                    else:
+                        accounts_and_roles[account] = set([(role, reason)])
+                else:
+                    self.logger.debug('Group "%s" did not match regex "%s"',
+                                      group, self.regex)
             except Exception as exc:
                 logging.debug("Error base_provider.ProviderByGroups.get_accounts_and_roles.group: %r" % group)
                 pass
+        logging.debug('finished base_provider.ProviderByGroups.get_accounts_and_roles')
         return accounts_and_roles
 
 
 class SimpleTestProvider(BaseProvider):
     """A sample Provider, for testing only"""
     def get_accounts_and_roles(self):
+        logging.debug('start base_provider.ProviderByGroups.SimpleTestProvider')
         reason = "Because I said so."
+        logging.debug('finished base_provider.ProviderByGroups.SimpleTestProvider')
         return {
             'testaccount': set([('testrole', reason)]),
             'testaccount1': set([('testrole2', reason)])}
@@ -99,11 +113,13 @@ class SimpleTestProvider(BaseProvider):
 
 class SingleAccountSingleRoleProvider(BaseProvider):
     def get_accounts_and_roles(self):
+        logging.debug('start & finished base_provider.ProviderByGroups.SingleAccountSingleRoleProvider')
         return {'the_only_account': set([('the_only_role', 'because I said so')])}
 
 
 class NoAccountNoRoleProvider(BaseProvider):
     def get_accounts_and_roles(self):
+        logging.debug("start & finished base_provider.ProviderByGroups.NoAccountNoRoleProvider")
         return {}
 
 
@@ -115,4 +131,5 @@ class GroupTestProvider(ProviderByGroups):
     it produces the same accounts and roles as the SimpleTestProvider.
     """
     def get_group_list(self):
+        logging.debug('start & finished base_provider.ProviderByGroups.GroupTestProvider')
         return ["testaccount-testrole", "testaccount1-testrole2", "foobar"]
